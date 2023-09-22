@@ -550,6 +550,7 @@ struct lxc_conf {
 	struct {
 		int ns_clone;
 		int ns_keep;
+		bool uns_isolated;
 		char *ns_share[LXC_NS_MAX];
 	};
 
@@ -593,6 +594,7 @@ __hidden extern int lxc_rootfs_init(struct lxc_conf *conf, bool userns);
 __hidden extern int lxc_rootfs_prepare_parent(struct lxc_handler *handler);
 __hidden extern int lxc_idmapped_mounts_parent(struct lxc_handler *handler);
 __hidden extern int lxc_map_ids(struct list_head *idmap, pid_t pid);
+__hidden extern int lxc_make_uns_isolated(pid_t pid);
 __hidden extern int lxc_create_tty(const char *name, struct lxc_conf *conf);
 __hidden extern void lxc_delete_tty(struct lxc_tty_info *ttys);
 __hidden extern int lxc_clear_config_caps(struct lxc_conf *c);

@@ -1781,6 +1781,7 @@ static int lxc_spawn(struct lxc_handler *handler)
 	 * again.
 	 */
 	if (wants_to_map_ids) {
+		TRACE("mapping uids...");
 		if (!handler->conf->ns_share[LXC_NS_USER] &&
 		    (handler->conf->ns_keep & CLONE_NEWUSER) == 0) {
 			ret = lxc_map_ids(id_map, handler->pid);
@@ -1788,6 +1789,21 @@ static int lxc_spawn(struct lxc_handler *handler)
 				ERROR("Failed to set up id mapping.");
 				goto out_delete_net;
 			}
+		}
+	}
+
+	if (handler->conf->uns_isolated) {
+		if (!(!handler->conf->ns_share[LXC_NS_USER] &&
+		    (handler->conf->ns_keep & CLONE_NEWUSER) == 0)) {
+			ERROR("your configuration is wrong");
+			goto out_delete_net;
+		}
+
+		TRACE("making container user namespace isolated...");
+		ret = lxc_make_uns_isolated(handler->pid);
+		if (ret < 0) {
+			ERROR("Failed to make user namespace isolated.");
+			goto out_delete_net;
 		}
 	}
 

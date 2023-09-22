@@ -104,6 +104,7 @@ lxc_config_define(mount_auto);
 lxc_config_define(mount_fstab);
 lxc_config_define(namespace_clone);
 lxc_config_define(namespace_keep);
+lxc_config_define(namespace_isolated);
 lxc_config_define(time_offset_boot);
 lxc_config_define(time_offset_monotonic);
 lxc_config_define(namespace_share);
@@ -245,6 +246,7 @@ static struct lxc_config_t config_jump_table[] = {
 	{ "lxc.mount.fstab",                true,  set_config_mount_fstab,                get_config_mount_fstab,                clr_config_mount_fstab,                },
 	{ "lxc.namespace.clone",            true,  set_config_namespace_clone,            get_config_namespace_clone,            clr_config_namespace_clone,            },
 	{ "lxc.namespace.keep",             true,  set_config_namespace_keep,             get_config_namespace_keep,             clr_config_namespace_keep,             },
+	{ "lxc.namespace.isolated",         true,  set_config_namespace_isolated,         get_config_namespace_isolated,         clr_config_namespace_isolated,         },
 	{ "lxc.namespace.share.",           false, set_config_namespace_share,            get_config_namespace_share,            clr_config_namespace_share,            },
 	{ "lxc.time.offset.boot",           true,  set_config_time_offset_boot,           get_config_time_offset_boot,           clr_config_time_offset_boot,           },
 	{ "lxc.time.offset.monotonic",      true,  set_config_time_offset_monotonic,      get_config_time_offset_monotonic,      clr_config_time_offset_monotonic,      },
@@ -2946,6 +2948,29 @@ static int set_config_namespace_keep(const char *key, const char *value,
 	return 0;
 }
 
+static int set_config_namespace_isolated(const char *key, const char *value,
+					 struct lxc_conf *lxc_conf, void *data)
+{
+	int ret;
+	unsigned int v;
+
+	if (lxc_config_value_empty(value)) {
+		lxc_conf->uns_isolated = false;
+		return 0;
+	}
+
+	ret = lxc_safe_uint(value, &v);
+	if (ret < 0)
+		return ret;
+
+	if (v > 1)
+		return ret_errno(EINVAL);
+
+	lxc_conf->uns_isolated = v ? true : false;
+
+	return 0;
+}
+
 static int set_config_time_offset_boot(const char *key, const char *value,
 				       struct lxc_conf *lxc_conf, void *data)
 {
@@ -4757,6 +4782,12 @@ static int get_config_namespace_keep(const char *key, char *retv, int inlen,
 	return fulllen;
 }
 
+static int get_config_namespace_isolated(const char *key, char *retv, int inlen,
+					 struct lxc_conf *c, void *data)
+{
+	return lxc_get_conf_int(c, retv, inlen, c->uns_isolated);
+}
+
 static int get_config_time_offset_boot(const char *key, char *retv, int inlen, struct lxc_conf *c,
 				       void *data)
 {
@@ -5348,6 +5379,13 @@ static int clr_config_namespace_keep(const char *key, struct lxc_conf *lxc_conf,
 				     void *data)
 {
 	lxc_conf->ns_keep = 0;
+	return 0;
+}
+
+static int clr_config_namespace_isolated(const char *key, struct lxc_conf *lxc_conf,
+					 void *data)
+{
+	lxc_conf->uns_isolated = false;
 	return 0;
 }
 

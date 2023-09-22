@@ -3713,6 +3713,27 @@ int lxc_map_ids(struct list_head *idmap, pid_t pid)
 	return 0;
 }
 
+int lxc_make_uns_isolated(pid_t pid)
+{
+	__do_close int fd = -EBADF;
+	int ret;
+	char path[PATH_MAX];
+
+	ret = strnprintf(path, sizeof(path), "/proc/%d/isolated_uns", pid);
+	if (ret < 0)
+		return -E2BIG;
+
+	fd = open(path, O_WRONLY | O_CLOEXEC);
+	if (fd < 0)
+		return log_error_errno(-1, errno, "Failed to open \"%s\"", path);
+
+	ret = lxc_write_nointr(fd, "yes", 3);
+	if (ret < 0 || (size_t)ret != 3)
+		return log_error_errno(-1, errno, "Failed to set isolated \"%s\"", path);
+
+	return 0;
+}
+
 /*
  * Return the host uid/gid to which the container root is mapped in val.
  * Return true if id was found, false otherwise.
