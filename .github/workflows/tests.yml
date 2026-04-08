@@ -247,9 +247,11 @@ jobs:
               rsync \
               uidmap
 
+          sudo apt-get install -qq lcov
+
       - name: Test
         env:
-          CC: ${{ matrix.compiler }}
+          CC: gcc
         run: |
           # Install LXC on the system
           sudo meson install -C build
@@ -263,6 +265,9 @@ jobs:
           # Undo default ACLs from Github
           sudo setfacl -b -R /home
 
+          export GCOV_PREFIX=/tmp/gcov
+          export GCOV_PREFIX_STRIP=6
+
           # Run the testsuite
           git clone --depth=1 https://github.com/lxc/lxc-ci
           sudo -E lxc-ci/deps/lxc-exercise
@@ -274,3 +279,11 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+
+      - name: Tmate debugging session
+        if: ${{ failure() }}
+        timeout-minutes: 60
+        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3.23
+        with:
+          # Never allow public SSH access
+          limit-access-to-actor: true
