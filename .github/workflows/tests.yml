@@ -40,13 +40,9 @@ jobs:
           - gcc
           - clang
         os:
-          - ubuntu-22.04
           - ubuntu-24.04
-          - ubuntu-22.04-arm
-          - ubuntu-24.04-arm
         async-api:
           - epoll
-          - io_uring
         variant:
           - default
           - sanitizer
@@ -76,7 +72,6 @@ jobs:
               uuid-runtime \
               docbook2x \
               linux-libc-dev \
-              llvm \
               libapparmor-dev \
               libcap-dev \
               libdbus-1-dev \
