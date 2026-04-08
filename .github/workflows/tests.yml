@@ -175,3 +175,107 @@ jobs:
           # Run the testsuite
           git clone --depth=1 https://github.com/lxc/lxc-ci
           sudo -E lxc-ci/deps/lxc-exercise
+
+  codecov:
+    name: Codecov
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq \
+              gcc \
+              meson \
+              pkg-config \
+              uuid-runtime \
+              docbook2x \
+              linux-libc-dev \
+              libapparmor-dev \
+              libcap-dev \
+              libdbus-1-dev \
+              libpam0g-dev \
+              libseccomp-dev \
+              libselinux1-dev \
+              liburing-dev
+
+      - name: Compiler version
+        env:
+          CC: gcc
+        run: |
+          ${CC} --version
+
+      - name: Build
+        env:
+          CC: gcc
+        run: |
+          # Landlock support
+          landlock=false
+          if [ -e /usr/include/linux/landlock.h ]; then
+            landlock=true
+          fi
+
+          # Standard build with gcov (b_coverage=true)
+          meson setup build \
+              -Dprefix=/usr \
+              -Dio-uring-event-loop=${{ matrix.async-api == 'io_uring' }} \
+              -Dtests=true \
+              -Dpam-cgroup=true \
+              -Dtools-multicall=true \
+              -Dlandlock-monitor=${landlock} \
+              -Dwerror=true \
+              -Db_lto_mode=default \
+              -Db_coverage=true
+
+          meson compile -C build
+
+      - name: Remove existing installation
+        run: |
+          sudo apt-get remove --purge -qq \
+              liblxc1 \
+              liblxc-common \
+              liblxc-dev \
+              lxc-utils
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install --purge -qq \
+              apparmor \
+              acl \
+              busybox-static \
+              dnsmasq-base \
+              iptables \
+              rsync \
+              uidmap
+
+      - name: Test
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          # Install LXC on the system
+          sudo meson install -C build
+
+          # Bring up systemd units
+          sudo sed -i 's/USE_LXC_BRIDGE="false"/USE_LXC_BRIDGE="true"/' /etc/default/lxc
+          sudo systemctl daemon-reload
+          sudo systemctl restart apparmor
+          sudo systemctl restart lxc-net
+
+          # Undo default ACLs from Github
+          sudo setfacl -b -R /home
+
+          # Run the testsuite
+          git clone --depth=1 https://github.com/lxc/lxc-ci
+          sudo -E lxc-ci/deps/lxc-exercise
+
+          ninja -C build coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
