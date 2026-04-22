@@ -265,12 +265,18 @@ jobs:
           # Undo default ACLs from Github
           sudo setfacl -b -R /home
 
-          export GCOV_PREFIX=/tmp/gcov
-          export GCOV_PREFIX_STRIP=6
+          # TODO: explain
+          # umask has to be called before a first criu run, so that .gcda (coverage data)
+          # files are created with read-write permissions for all.
+          umask 0000
+          # Also fix permissions on .gcda files already created during the build (owned
+          # by root). Restored processes run as non-root and must be able to write them.
+          sudo find /home/runner -name '*.gcda' -exec chmod a+rw {} +
+          sudo chmod -R 0777 /home/runner
 
           # Run the testsuite
           git clone --depth=1 https://github.com/lxc/lxc-ci
-          sudo -E lxc-ci/deps/lxc-exercise
+          sudo -E sh -c 'umask 0000 ; lxc-ci/deps/lxc-exercise'
 
           ninja -C build coverage
 
